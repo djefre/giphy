@@ -20,8 +20,8 @@
             <!-- GRID -->
             <section class="section">
                 <div class="container">
-                    <div class="columns is-multiline is-mobile">
-                        <div class="column is-one-fifth" v-for="gif in foundGifs" :key="foundGifs.indexOf(gif)">
+                    <div class="columns is-multiline is-hcentered is-desktop is-tablet">
+                        <div class="column is-2" v-for="gif in foundGifs" :key="foundGifs.indexOf(gif)">
                             <img :src="gif" @click="copyToClipBoard(gif)" />
                         </div>
                     </div>
