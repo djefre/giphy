@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>GiphyProxy</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+    </head>
+    <body >
+        <div id="app">
+            <!-- SEARCHBAR -->
+            <section class="section">
+                <div class="container">
+                    <div class="columns is-hcentered is-narrow">
+                        <div class="column is-3 is-offset-one-third">
+                            <input v-model="searchQuery" class="input" type="text" placeholder="Type searchQuery here...">
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- GRID -->
+            <section class="section">
+                <div class="container">
+                    <div class="columns is-multiline is-mobile">
+                        <div class="column is-one-fifth" v-for="gif in foundGifs" :key="foundGifs.indexOf(gif)">
+                            <img :src="gif" @click="copyToClipBoard(gif)" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- END OF CONTENT, START OF SCRIPTS -->
+
+        <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+        <script lang="javascript" src="https://cdn.jsdelivr.net/gh/djefre/CDNJS/httpclient.js"></script>
+        <script>
+            var app = new Vue({
+                el: '#app',
+                data: {
+                    foundGifs: [],
+                    baseGifUrl: "https://i.giphy.com/",
+                    searchQuery: "",
+                    awaitingSearch: false
+                },
+                computed: {
+                    requestUrl() {
+                        let paramsKvps = [
+                            ["api_key", "sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh"], // TODO Change this
+                            ["q", this.searchQuery],
+                            ["limit", 15]
+                        ]
+
+                        let url =  "https://api.giphy.com/v1/gifs/search?"
+                        paramsKvps.forEach((kvp) => {
+                            url += kvp[0] + "=" + kvp[1] + "&"
+                        })
+                        return url;
+                    }
+                },
+                methods: {
+                    getData(){
+                        fetch(this.requestUrl)
+                            .then((r) => {
+                                if(+r.status !== 200) throw Error("Response was not succesfull")
+                                return r.json()
+                            })
+                            .then((r) => {
+                                this.foundGifs = []
+                                // Convert and add gifs to collection
+                                r.data.forEach((g) => {
+                                    let gif = this.baseGifUrl + g.id + ".gif"
+                                    this.foundGifs.push(gif)
+                                })
+
+                                console.log("Parsed Gifs", this.foundGifs)
+                            })
+                            .catch((e) => {
+                                console.error(e)
+                            })
+                    },
+                    copyToClipBoard(textToCopy){
+                        try{
+                            navigator.clipboard.writeText(textToCopy)
+                                .then(()=> {
+                                    console.log(textToCopy + ' copied to ClipBoard')
+                                })
+                                .catch((e) => {
+                                    console.error(e)
+                                })
+                        }
+                        catch(e) {
+                            onsole.log('could not copy to ClipBoard :(')
+                        }
+                    }
+                },
+                watch: {
+                    searchQuery: function () {
+                        if (!this.awaitingSearch) {
+                            setTimeout(() => {
+                                this.getData()
+                                this.awaitingSearch = false;
+                            }, 1000); // 1 sec delay
+                        }
+                        this.awaitingSearch = true;
+                    },
+                },
+            })
+        </script>
+    </body>
+</html>
