@@ -3,27 +3,59 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>GiphyProxy</title>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+        <style>
+            :root{
+                --ukrblue: rgba(0,91,187,1); /* '#005bbb' */
+                --urkyellow: rgba(255,213,0,1); /* '#ffd500' */
+            }
+            body {
+                min-height: 100vh;
+                background: linear-gradient(0deg, var(--urkyellow) 20%, var(--ukrblue) 80%);
+                margin: 0 auto;
+            }
+            .nothingfound{
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .nothingfound > img{
+                min-height: 300px;
+            }
+        </style>
     </head>
-    <body >
+    <body>
         <div id="app">
             <!-- SEARCHBAR -->
             <section class="section">
                 <div class="container">
                     <div class="columns is-hcentered is-narrow">
-                        <div class="column is-3 is-offset-one-third">
-                            <input v-model="searchQuery" class="input" type="text" placeholder="Type searchQuery here...">
-                        </div>
+                        <div class="column is-4 is-offset-one-third field is-grouped">
+                            <p class="control is-expanded">
+                                <input v-model="searchQuery" class="input" type="text" placeholder="Type searchQuery here, or in the url">
+                            </p>
+                            <p class="control">
+                              <a class="button is-light" @click="clear()">
+                                Clear
+                              </a>
+                            </p>
+                          </div>
                     </div>
                 </div>
             </section>
             <!-- GRID -->
             <section class="section">
                 <div class="container">
-                    <div class="columns is-multiline is-hcentered is-desktop is-tablet">
-                        <div class="column is-2" v-for="gif in foundGifs" :key="foundGifs.indexOf(gif)">
+                    <div v-if="awaitingSearch && searchQuery.length > 0">
+                        <progress class="progress is-medium is-dark" max="100">50%</progress>
+                    </div>
+                    <div v-else-if="!awaitingSearch && foundGifs.length > 0" class="columns is-multiline is-hcentered is-desktop is-tablet">
+                        <div  class="column is-2" v-for="gif in foundGifs" :key="foundGifs.indexOf(gif)">
                             <img :src="gif" @click="copyToClipBoard(gif)" />
                         </div>
+                    </div>
+                    <div v-else class="nothingfound && searchQuery.length > 0">
+                        <p>Nothing...</p>
                     </div>
                 </div>
             </section>
@@ -31,16 +63,22 @@
 
         <!-- END OF CONTENT, START OF SCRIPTS -->
 
-        <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
-        <script lang="javascript" src="https://cdn.jsdelivr.net/gh/djefre/CDNJS/httpclient.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vue@latest/dist/vue.js"></script>
         <script>
             var app = new Vue({
                 el: '#app',
                 data: {
+                    debug: true,
                     foundGifs: [],
                     baseGifUrl: "https://i.giphy.com/",
                     searchQuery: "",
                     awaitingSearch: false
+                },
+                mounted: async function() {
+                    let param = new URLSearchParams(window.location.search).get('q')
+                    if(!param) return
+                    
+                    this.searchQuery = decodeURIComponent(param)
                 },
                 computed: {
                     requestUrl() {
@@ -58,46 +96,47 @@
                     }
                 },
                 methods: {
+                    clear(){
+                        this.searchQuery = ""
+                        this.foundGifs = []
+                    },
                     getData(){
+                        if(!this.searchQuery) return
+                        this.foundGifs = []
                         fetch(this.requestUrl)
                             .then((r) => {
                                 if(+r.status !== 200) throw Error("Response was not succesfull")
                                 return r.json()
                             })
                             .then((r) => {
-                                this.foundGifs = []
                                 // Convert and add gifs to collection
                                 r.data.forEach((g) => {
                                     let gif = this.baseGifUrl + g.id + ".gif"
                                     this.foundGifs.push(gif)
                                 })
-
-                                console.log("Parsed Gifs", this.foundGifs)
                             })
                             .catch((e) => {
                                 console.error(e)
                             })
                     },
                     copyToClipBoard(textToCopy){
-                        try{
-                            navigator.clipboard.writeText(textToCopy)
-                                .then(()=> {
-                                    console.log(textToCopy + ' copied to ClipBoard')
-                                })
-                                .catch((e) => {
-                                    console.error(e)
-                                })
-                        }
-                        catch(e) {
-                            onsole.log('could not copy to ClipBoard :(')
-                        }
+                        navigator.clipboard.writeText(textToCopy)
+                            .then(()=> {
+                                if (this.debug) console.log(textToCopy + ' copied to ClipBoard')
+                            })
+                            .catch((e) => {
+                                console.error('could not copy to ClipBoard :(', e)
+                            })
+                    },
+                    hasSearched(){
+                       return window.localStorage.getItem('searched')
                     }
                 },
                 watch: {
                     searchQuery: function () {
                         if (!this.awaitingSearch) {
                             setTimeout(() => {
-                                this.getData()
+                                this.getData() // Fire request
                                 this.awaitingSearch = false;
                             }, 1000); // 1 sec delay
                         }
