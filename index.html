@@ -32,7 +32,7 @@
                     <div class="columns is-hcentered is-narrow">
                         <div class="column is-4 is-offset-one-third field is-grouped">
                             <p class="control is-expanded">
-                                <input autofocus v-model="searchQuery" class="input" type="text" placeholder="Type searchQuery here, or in the url" />
+                                <input ref="search" v-model="searchQuery" class="input" type="text" placeholder="Type searchQuery here, or in the url" />
                             </p>
                             <p class="control">
                               <a class="button is-light" @click="clear()">
@@ -74,11 +74,13 @@
                     searchQuery: "",
                     awaitingSearch: false
                 },
-                mounted: async function() {
+                mounted: function() {
                     let param = new URLSearchParams(window.location.search).get('q')
-                    if(!param) return
-                    
-                    this.searchQuery = decodeURIComponent(param)
+                    if (param) {
+                        this.searchQuery = decodeURIComponent(param)
+                    }
+
+                    this.$refs.search.focus()
                 },
                 computed: {
                     requestUrl() {
